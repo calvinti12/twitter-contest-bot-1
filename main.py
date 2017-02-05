@@ -4,6 +4,8 @@ import time
 import json
 import os.path
 import sys
+import dataset
+import json
 
 # Load our configuration from the JSON file.
 with open('config.json') as data_file:
@@ -27,16 +29,50 @@ fav_keywords = data["fav-keywords"]
 # Don't edit these unless you know what you're doing.
 api = TwitterAPI(consumer_key, consumer_secret, access_token_key, access_token_secret)
 post_list = list()
-ignore_list = list()
 ratelimit=[999,999,100]
 ratelimit_search=[999,999,100]
 
-if os.path.isfile('ignorelist'):
-	print("Loading ignore list")
-	with open('ignorelist') as f:
-		ignore_list = f.read().splitlines()
-	f.close()
+db = dataset.connect('sqlite:///mydatabase.db')
 
+def UpdateIgnoreList(id):
+	#update db list!
+	t_ign = db['ignorelist']
+	t_ign.insert(dict(tweet_id=id))
+
+def GetIgnoreList():
+	all_ignores = list()
+
+	for item in db['ignorelist']:
+		all_ignores.append(item['tweet_id'])
+
+	return all_ignores
+
+
+
+def PostListAddItem(item):
+	# Update the list
+	post_list.append(item)
+
+	# convert to string
+	data = json.dumps(item)
+
+	# Update the Database
+	post_db = db['postlist']
+	post_db.insert(dict(data=data))
+
+def PostListLength():
+	return db['postlist'].count()
+
+
+def FirstPostListItem():
+	all_posts = list()
+	for item in db['postlist']:
+		all_posts.append(item['data'])
+
+	return json.loads(all_posts[0])
+
+def RemoveFirstPostListItem():
+	db['postlist'].delete(id=1)
 
 # Print and log the text
 def LogAndPrint( text ):
@@ -97,13 +133,13 @@ def UpdateQueue():
 
 	print("=== CHECKING RETWEET QUEUE ===")
 
-	print("Queue length: " + str(len(post_list)))
+	print("Queue length: " + str(PostListLength()))
 
-	if len(post_list) > 0:
+	if PostListLength() > 0:
 
 		if not ratelimit[2] < min_ratelimit_retweet:
 
-			post = post_list[0]
+			post = FirstPostListItem()
 			LogAndPrint("Retweeting: " + str(post['id']) + " " + str(post['text'].encode('utf8')))
 
 			CheckForFollowRequest(post)
@@ -111,7 +147,7 @@ def UpdateQueue():
 
 			r = api.request('statuses/retweet/:' + str(post['id']))
 			CheckError(r)
-			post_list.pop(0)
+			RemoveFirstPostListItem()
 
 		else:
 
@@ -193,27 +229,26 @@ def ScanForContests():
 						original_user_item = original_item['user']
 						original_screen_name = original_user_item['screen_name']
 
-					if not original_id in ignore_list:
+					ignore_list_local = GetIgnoreList()
 
-						if not original_screen_name in ignore_list:
+					if not original_id in ignore_list_local:
 
-							if not screen_name in ignore_list:
+						if not original_screen_name in ignore_list_local:
+
+							if not screen_name in ignore_list_local:
 
 								if item['retweet_count'] > 0:
 
-									post_list.append(item)
-									f_ign = open('ignorelist', 'a')
+									PostListAddItem(item)
 
 									if is_retweet:
 										print(id + " - " + screen_name + " retweeting " + original_id + " - " + original_screen_name + ": " + text)
-										ignore_list.append(original_id)
-										f_ign.write(original_id + "\n")
+										UpdateIgnoreList(original_id)
+
 									else:
 										print(id + " - " + screen_name + ": " + text)
-										ignore_list.append(id)
-										f_ign.write(id + "\n")
+										UpdateIgnoreList(id)
 
-									f_ign.close()
 
 						else:
 
@@ -233,11 +268,11 @@ def ScanForContests():
 
 			except Exception as e:
 				print("Could not connect to TwitterAPI - are your credentials correct?")
-				print("Exception: " + e)
+				print("Exception: " + str(e))
 
 	else:
 
-		print("Search skipped! Queue: " + str(len(post_list)) + " Ratelimit: " + str(ratelimit_search[1]) + "/" + str(ratelimit_search[0]) + " (" + str(ratelimit_search[2]) + "%)")
+		print("Search skipped! Queue: " + str(PostListLength()) + " Ratelimit: " + str(ratelimit_search[1]) + "/" + str(ratelimit_search[0]) + " (" + str(ratelimit_search[2]) + "%)")
 
 
 CheckRateLimit()
