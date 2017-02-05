@@ -6,7 +6,7 @@ import os.path
 import sys
 
 # Load our configuration from the JSON file.
-with open('config.json') as data_file:    
+with open('config.json') as data_file:
 	data = json.load(data_file)
 
 # These vars are loaded in from config.
@@ -64,7 +64,7 @@ def CheckRateLimit():
 	if ratelimit[2] < min_ratelimit:
 		print("Ratelimit too low -> Cooldown (" + str(ratelimit[2]) + "%)")
 		time.sleep(30)
-	
+
 	r = api.request('application/rate_limit_status').json()
 
 	for res_family in r['resources']:
@@ -81,10 +81,10 @@ def CheckRateLimit():
 
 			#print(res_family + " -> " + res + ": " + str(percent))
 			if percent < 5.0:
-				LogAndPrint(res_family + " -> " + res + ": " + str(percent) + "  !!! <5% Emergency exit !!!")				
+				LogAndPrint(res_family + " -> " + res + ": " + str(percent) + "  !!! <5% Emergency exit !!!")
 				sys.exit(res_family + " -> " + res + ": " + str(percent) + "  !!! <5% Emergency exit !!!")
 			elif percent < 30.0:
-				LogAndPrint(res_family + " -> " + res + ": " + str(percent) + "  !!! <30% alert !!!")				
+				LogAndPrint(res_family + " -> " + res + ": " + str(percent) + "  !!! <30% alert !!!")
 			elif percent < 70.0:
 				print(res_family + " -> " + res + ": " + str(percent))
 
@@ -112,9 +112,9 @@ def UpdateQueue():
 			r = api.request('statuses/retweet/:' + str(post['id']))
 			CheckError(r)
 			post_list.pop(0)
-		
+
 		else:
-	
+
 			print("Ratelimit at " + str(ratelimit[2]) + "% -> pausing retweets")
 
 
@@ -156,25 +156,25 @@ def ScanForContests():
 	t = threading.Timer(scan_update_time, ScanForContests)
 	t.daemon = True;
 	t.start()
-	
+
 	global ratelimit_search
-	
+
 	if not ratelimit_search[2] < min_ratelimit_search:
-	
+
 		print("=== SCANNING FOR NEW CONTESTS ===")
 
 
 		for search_query in search_queries:
 
 			print("Getting new results for: " + search_query)
-		
+
 			try:
 				r = api.request('search/tweets', {'q':search_query, 'result_type':"mixed", 'count':100})
 				CheckError(r)
 				c=0
-					
+
 				for item in r:
-					
+
 					c=c+1
 					user_item = item['user']
 					screen_name = user_item['screen_name']
@@ -182,6 +182,7 @@ def ScanForContests():
 					text = text.replace("\n","")
 					id = str(item['id'])
 					original_id=id
+					original_screen_name = screen_name
 					is_retweet = 0
 
 					if 'retweeted_status' in item:
@@ -195,9 +196,9 @@ def ScanForContests():
 					if not original_id in ignore_list:
 
 						if not original_screen_name in ignore_list:
-				
+
 							if not screen_name in ignore_list:
-	
+
 								if item['retweet_count'] > 0:
 
 									post_list.append(item)
@@ -215,19 +216,19 @@ def ScanForContests():
 									f_ign.close()
 
 						else:
-			
+
 							if is_retweet:
 								print(id + " ignored: " + original_screen_name + " on ignore list")
 							else:
 								print(original_screen_name + " in ignore list")
 
 					else:
-	
+
 						if is_retweet:
 							print(id + " ignored: " + original_id + " on ignore list")
 						else:
 							print(id + " in ignore list")
-				
+
 				print("Got " + str(c) + " results")
 
 			except Exception as e:
