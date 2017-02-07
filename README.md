@@ -2,7 +2,7 @@
 
 Inspired by the twitter bot idea from http://www.hscott.net/twitter-contest-winning-as-a-service/
 
-[![Build Status](https://travis-ci.org/kurozael/twitter-contest-bot.svg?branch=master)](https://travis-ci.org/kurozael/twitter-contest-bot)
+[![Build Status](https://travis-ci.org/Designer023/twitter-contest-bot.svg?branch=master)](https://travis-ci.org/Designer023/twitter-contest-bot)
 
 
 Disclaimer
