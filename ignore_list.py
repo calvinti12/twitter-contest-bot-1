@@ -1,7 +1,8 @@
 import peewee
 from peewee import *
 
-db = MySQLDatabase('twitter-comp', user='root',passwd='root')
+db = MySQLDatabase('twitter-comp', user='root', passwd='root')
+
 
 class IgnoredItem(peewee.Model):
     tweet_id = peewee.CharField()
@@ -9,13 +10,13 @@ class IgnoredItem(peewee.Model):
     class Meta:
         database = db
 
+
 try:
     IgnoredItem.create_table()
     print 'Ignore list created'
 except:
     print 'Ignore list already created'
     pass
-
 
 
 class IgnoreList(object):
@@ -32,4 +33,3 @@ class IgnoreList(object):
         for item in IgnoredItem.select():
             ignore_list.append(item.tweet_id)
         return ignore_list
-
