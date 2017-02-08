@@ -40,11 +40,13 @@ class Twitter(object):
                 elif percent < 70.0:
                     print(res_family + " -> " + res + ": " + str(percent))
 
-    # def followUser(self, username):
-    #     try:
-    #         r = twitter.api.request('friendships/create', {'screen_name': username })
-    #         CheckError(r)
-    #         LogAndPrint("Follow: " + username)
+    def followUser(self, username):
+        # try:
+        r = self.api.request('friendships/create', {'screen_name': username })
+        if 'errors' in r.json():
+            raise ValueError('error: ' + str(r['errors'][0]['message']))
+        else:
+            LogAndPrint("Followed: " + username)
 
     def rateHigh(self):
         if self.rate_limit[2] < self.min_ratelimit:

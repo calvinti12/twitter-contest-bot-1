@@ -1,28 +1,5 @@
 import json
-import peewee
-from peewee import *
-
-db = MySQLDatabase('twitter-comp', user='root', passwd='root')
-
-
-class QueuedItem(peewee.Model):
-    json = peewee.TextField()
-    tweet_id = peewee.TextField()
-
-    class Meta:
-        database = db
-        indexes = (
-            (('tweet_id'), True),
-        )
-
-
-try:
-    QueuedItem.create_table()
-    print 'Queue created'
-except:
-    print 'Queue already created'
-    pass
-
+from database_models.queuedItem import *
 
 class PostQueue(object):
 
@@ -43,4 +20,6 @@ class PostQueue(object):
         return json.loads(data.json)
 
     def popFirst(self):
-        QueuedItem.execute_sql('DELETE from queueditem LIMIT 1')
+        first = QueuedItem.select().get()
+        print ("Deleting: " + str(first.tweet_id))
+        first.delete_instance()
