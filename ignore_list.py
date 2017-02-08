@@ -33,3 +33,12 @@ class IgnoreList(object):
         for item in IgnoredItem.select():
             ignore_list.append(item.tweet_id)
         return ignore_list
+
+    def list_as_json(self):
+        ignore_list = list()
+        for item in IgnoredItem.select():
+            ignore_list.append({
+                'id':item.id,
+                'tweet_id': item.tweet_id})
+
+        return ignore_list

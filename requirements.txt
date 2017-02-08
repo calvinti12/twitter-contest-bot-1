@@ -2,3 +2,4 @@ TwitterAPI==2.4.3
 pep8==1.7.0
 MySQL-python==1.2.5
 peewee==2.8.5
+Flask==0.12

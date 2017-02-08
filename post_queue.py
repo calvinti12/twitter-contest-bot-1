@@ -23,3 +23,13 @@ class PostQueue(object):
         first = QueuedItem.select().get()
         print ("Deleting: " + str(first.tweet_id))
         first.delete_instance()
+
+    def list_as_json(self):
+        queue_list = list()
+        for item in QueuedItem.select():
+            queue_list.append({
+                'id':item.id,
+                'json': json.loads(item.json),
+                'tweet_id': item.tweet_id})
+
+        return queue_list

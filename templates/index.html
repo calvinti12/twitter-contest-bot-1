@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Tweet Comp Bot</title>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+
+</head>
+<body>
+    <div id="sending"></div>
+
+    <script>
+        $( document ).ready(function() {
+            setInterval("updateTweetQueue()",5000);
+        })
+
+        var $sending_container = $('#sending');
+
+        function updateTweetQueue() {
+          $.ajax({
+           type: "GET",
+           url: "/tweetbot/api/v1.0/queue",
+           success: function(data){
+               var tweeting = data.backlog[0].json.text;
+               $sending_container.html(tweeting)
+           }
+         });
+        }
+    </script>
+</body>
+</html>
