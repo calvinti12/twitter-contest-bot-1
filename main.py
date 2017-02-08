@@ -31,16 +31,10 @@ follow_keywords = data["follow-keywords"]
 fav_keywords = data["fav-keywords"]
 blocked_keywords = data["blocked-keywords"]
 
-# Don't edit these unless you know what you're doing.
-api = TwitterAPI(consumer_key, consumer_secret,
-                 access_token_key, access_token_secret)
-ratelimit = [999, 999, 100]
-ratelimit_search = [999, 999, 100]
-
-database = 'sqlite:///mydatabase.db'
-
 twitter = Twitter(consumer_key, consumer_secret,
-                 access_token_key, access_token_secret)
+                 access_token_key, access_token_secret,
+                 min_ratelimit, min_ratelimit_search, min_ratelimit_retweet)
+
 ignore = IgnoreList()
 queue = PostQueue()
 
@@ -50,35 +44,11 @@ def CheckRateLimit():
     c.daemon = True
     c.start()
 
-    global ratelimit
-    global ratelimit_search
-
-    if ratelimit[2] < min_ratelimit:
-        print("Ratelimit too low -> Cooldown (" + str(ratelimit[2]) + "%)")
+    if twitter.rateHigh():
+        print("Ratelimit too low -> Cooldown (" + str(twitter.rate_limit[2]) + "%)")
         time.sleep(30)
 
-    r = api.request('application/rate_limit_status').json()
-
-    for res_family in r['resources']:
-        for res in r['resources'][res_family]:
-            limit = r['resources'][res_family][res]['limit']
-            remaining = r['resources'][res_family][res]['remaining']
-            percent = float(remaining)/float(limit)*100
-
-            if res == "/search/tweets":
-                ratelimit_search = [limit, remaining, percent]
-
-            if res == "/application/rate_limit_status":
-                ratelimit = [limit, remaining, percent]
-
-            # print(res_family + " -> " + res + ": " + str(percent))
-            if percent < 5.0:
-                LogAndPrint(res_family + " -> " + res + ": "+ str(percent) + "  !!! <5% Emergency exit !!!")
-                sys.exit(res_family + " -> " + res + ": " + str(percent) + "  !!! <5% Emergency exit !!!")
-            elif percent < 30.0:
-                LogAndPrint(res_family + " -> " + res + ": " + str(percent) + "  !!! <30% alert !!!")
-            elif percent < 70.0:
-                print(res_family + " -> " + res + ": " + str(percent))
+    twitter.updateRateLimitStatus()
 
 
 # Update the Retweet queue (this prevents too many retweets happening at once.)
@@ -93,7 +63,7 @@ def UpdateQueue():
 
     if queue.count() > 0:
 
-        if not ratelimit[2] < min_ratelimit_retweet:
+        if twitter.canRetweet():
 
             post = queue.first()
             print("first post: " + str(post['id']))
@@ -105,7 +75,7 @@ def UpdateQueue():
             CheckForFollowRequest(post)
             CheckForFavoriteRequest(post)
 
-            r = api.request('statuses/retweet/:' + str(post['id']))
+            r = twitter.api.request('statuses/retweet/:' + str(post['id']))
             CheckError(r)
 
             queue.popFirst()
@@ -113,7 +83,7 @@ def UpdateQueue():
         else:
 
             print("Ratelimit at " + str(
-                ratelimit[2]) + "% -> pausing retweets")
+                twitter.rate_limit[2]) + "% -> pausing retweets")
 
 
 # Check if a post requires you to follow the user.
@@ -123,13 +93,14 @@ def CheckForFollowRequest(item):
     text = item['text']
     if any(x in text.lower() for x in follow_keywords):
         try:
-            r = api.request('friendships/create', {'screen_name': item['retweeted_status']['user']['screen_name']})
+            twitter.followUser(item['retweeted_status']['user']['screen_name'])
+            r = twitter.api.request('friendships/create', {'screen_name': item['retweeted_status']['user']['screen_name']})
             CheckError(r)
             LogAndPrint("Follow: " + item['retweeted_status']['user']['screen_name'])
         except:
             user = item['user']
             screen_name = user['screen_name']
-            r = api.request('friendships/create', {'screen_name': screen_name})
+            r = twitter.api.request('friendships/create', {'screen_name': screen_name})
             CheckError(r)
             LogAndPrint("Follow: " + screen_name)
 
@@ -142,11 +113,11 @@ def CheckForFavoriteRequest(item):
 
     if any(x in text.lower() for x in fav_keywords):
         try:
-            r = api.request('favorites/create', {'id': item['retweeted_status']['id']})
+            r = twitter.api.request('favorites/create', {'id': item['retweeted_status']['id']})
             CheckError(r)
             LogAndPrint("Favorite: " + str(item['retweeted_status']['id']))
         except:
-            r = api.request('favorites/create', {'id': item['id']})
+            r = twitter.api.request('favorites/create', {'id': item['id']})
             CheckError(r)
             LogAndPrint("Favorite: " + str(item['id']))
 
@@ -168,9 +139,7 @@ def ScanForContests():
     t.daemon = True
     t.start()
 
-    global ratelimit_search
-
-    if not ratelimit_search[2] < min_ratelimit_search:
+    if twitter.canSearch():
 
         print("=== SCANNING FOR NEW CONTESTS ===")
 
@@ -179,7 +148,7 @@ def ScanForContests():
             print("Getting new results for: " + search_query)
 
             try:
-                r = api.request(
+                r = twitter.api.request(
                     'search/tweets', {'q': search_query,
                                       'result_type': "mixed", 'count': 100})
                 CheckError(r)
@@ -254,7 +223,7 @@ def ScanForContests():
 
     else:
 
-        print("Search skipped! Queue: " + str(queue.count()) + " Ratelimit: " + str(ratelimit_search[1]) + "/" + str(ratelimit_search[0]) + " (" + str(ratelimit_search[2]) + "%)")
+        print("Search skipped! Queue: " + str(queue.count()) + " Ratelimit: " + str(twitter.rate_limit_search[1]) + "/" + str(ratelimit_search[0]) + " (" + str(ratelimit_search[2]) + "%)")
 
 
 CheckRateLimit()
