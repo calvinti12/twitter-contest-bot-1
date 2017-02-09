@@ -1,8 +1,7 @@
 import peewee
 from peewee import *
 
-db = MySQLDatabase('twitter-comp', user='root', passwd='root')
-
+from settings import *
 
 class QueuedItem(peewee.Model):
     json = peewee.TextField()
@@ -11,7 +10,11 @@ class QueuedItem(peewee.Model):
 
 
     class Meta:
-        database = db
+        database = MySQLDatabase(
+            database_table,
+            user=database_user,
+            passwd=database_password
+        )
         indexes = (
             (('tweet_id'), True),
         )
