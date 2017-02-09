@@ -1,22 +1,24 @@
 import peewee
 from peewee import *
 
-db = MySQLDatabase('twitter-comp', user='root', passwd='root')
-
+from settings import *
 
 class IgnoredItem(peewee.Model):
     tweet_id = peewee.CharField()
 
     class Meta:
-        database = db
+        database = MySQLDatabase(
+            database_table,
+            user=database_user,
+            passwd=database_password
+        )
 
-
-try:
-    IgnoredItem.create_table()
-    print 'Ignore list created'
-except:
-    print 'Ignore list already created'
-    pass
+        try:
+            IgnoredItem.create_table()
+            print 'Ignore list created'
+        except:
+            print 'Ignore list already created'
+            pass
 
 
 class IgnoreList(object):

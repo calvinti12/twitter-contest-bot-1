@@ -1,8 +1,7 @@
-from TwitterAPI import TwitterAPI
+from settings import *
 import threading
 import time
-import sys
-import json
+
 
 from twitter import Twitter
 from post_queue import PostQueue
@@ -10,26 +9,7 @@ from ignore_list import IgnoreList
 
 from log import LogAndPrint, CheckError
 
-# Load our configuration from the JSON file.
-with open('config.json') as data_file:
-    data = json.load(data_file)
 
-# These vars are loaded in from config.
-consumer_key = data["consumer-key"]
-consumer_secret = data["consumer-secret"]
-access_token_key = data["access-token-key"]
-access_token_secret = data["access-token-secret"]
-retweet_update_time = data["retweet-update-time"]
-retweet_threshold = data["retweet-threshold"]
-scan_update_time = data["scan-update-time"]
-rate_limit_update_time = data["rate-limit-update-time"]
-min_ratelimit = data["min-ratelimit"]
-min_ratelimit_retweet = data["min-ratelimit-retweet"]
-min_ratelimit_search = data["min-ratelimit-search"]
-search_queries = data["search-queries"]
-follow_keywords = data["follow-keywords"]
-fav_keywords = data["fav-keywords"]
-blocked_keywords = data["blocked-keywords"]
 
 twitter = Twitter(consumer_key, consumer_secret,
                  access_token_key, access_token_secret,
@@ -86,6 +66,7 @@ def UpdateQueue():
                 twitter.rate_limit[2]) + "% -> pausing retweets")
 
 
+
 # Check if a post requires you to follow the user.
 # Be careful with this function! Twitter may write ban your
 # application for following too aggressively
@@ -132,6 +113,7 @@ def CheckForBlockedKeywords(item):
         return True
     # Not blocked
     return False
+
 
 
 # Scan for new contests, but not too often because of the rate limit.

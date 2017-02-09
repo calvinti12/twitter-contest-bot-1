@@ -3,3 +3,4 @@ log
 ignorelist
 .idea/
 *.pyc
+settings.py
