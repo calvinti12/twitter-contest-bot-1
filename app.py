@@ -128,16 +128,9 @@ def CheckForFollowRequest(item):
     if any(x in text.lower() for x in follow_keywords):
         try:
             twitter.followUser(item['retweeted_status']['user']['screen_name'])
-            # r = twitter.api.request('friendships/create', {'screen_name': item['retweeted_status']['user']['screen_name']})
-            # CheckError(r)
-            # LogAndPrint("Follow: " + item['retweeted_status']['user']['screen_name'])
+
         except:
             twitter.followUser(item['user']['screen_name'])
-            # user = item['user']
-            # screen_name = user['screen_name']
-            # r = twitter.api.request('friendships/create', {'screen_name': screen_name})
-            # CheckError(r)
-            # LogAndPrint("Follow: " + screen_name)
 
 
 # Check if a post requires you to favorite the tweet.
@@ -166,21 +159,6 @@ def CheckForBlockedKeywords(item):
         return True
     # Not blocked
     return False
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 @app.route('/')
