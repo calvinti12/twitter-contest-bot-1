@@ -6,7 +6,7 @@ from celery import Celery
 from celery.task import periodic_task
 
 from twitter import Twitter
-from post_queue import PostQueue
+# from post_queue import PostQueue
 from ignore_list import IgnoreList
 from log import *
 
@@ -24,7 +24,7 @@ twitter = Twitter(consumer_key, consumer_secret,
                  access_token_key, access_token_secret,
                  min_ratelimit, min_ratelimit_search, min_ratelimit_retweet)
 ignore = IgnoreList()
-queue = PostQueue()
+# queue = PostQueue()
 
 #Schedule tasks with beat
 @periodic_task(run_every=timedelta(seconds=rate_limit_update_time))
@@ -34,20 +34,7 @@ def CheckRateLimit():
 
 @periodic_task(run_every=timedelta(seconds=retweet_update_time))
 def UpdateQueue():
-
-    if queue.count() > 0:
-
-        if twitter.canRetweet():
-
-            post = queue.first()
-
-            CheckForFollowRequest(post)
-            CheckForFavoriteRequest(post)
-
-            r = twitter.api.request('statuses/retweet/:' + str(post['id']))
-            CheckError(r)
-
-            queue.popFirst()
+    twitter.updateQueue()
 
 
 @periodic_task(run_every=timedelta(seconds=scan_update_time))
@@ -85,7 +72,7 @@ def ScanForContests():
                             'screen_name']
 
                     ignore_list_local = ignore.list()
-                    contains_blocked_keywords = CheckForBlockedKeywords(
+                    contains_blocked_keywords = twitter.CheckForBlockedKeywords(
                         item)
 
                     if not original_id in ignore_list_local and not contains_blocked_keywords:
@@ -97,7 +84,7 @@ def ScanForContests():
                                 if item[
                                     'retweet_count'] > retweet_threshold:
 
-                                    queue.add(item)
+                                    twitter.queue_add(item)
 
                                     if is_retweet:
                                         print(
@@ -120,45 +107,7 @@ def ScanForContests():
                 print("Exception: " + str(e))
 
 
-# Check if a post requires you to follow the user.
-# Be careful with this function! Twitter may write ban your
-# application for following too aggressively
-def CheckForFollowRequest(item):
-    text = item['text']
-    if any(x in text.lower() for x in follow_keywords):
-        try:
-            twitter.followUser(item['retweeted_status']['user']['screen_name'])
 
-        except:
-            twitter.followUser(item['user']['screen_name'])
-
-
-# Check if a post requires you to favorite the tweet.
-# Be careful with this function! Twitter may write ban your
-# application for favoriting too aggressively
-def CheckForFavoriteRequest(item):
-    text = item['text']
-
-    if any(x in text.lower() for x in fav_keywords):
-        try:
-            r = twitter.api.request('favorites/create', {'id': item['retweeted_status']['id']})
-            CheckError(r)
-            LogAndPrint("Favorite: " + str(item['retweeted_status']['id']))
-        except:
-            r = twitter.api.request('favorites/create', {'id': item['id']})
-            CheckError(r)
-            LogAndPrint("Favorite: " + str(item['id']))
-
-
-def CheckForBlockedKeywords(item):
-    text = item['text']
-
-    if any(x in text.lower() for x in blocked_keywords):
-        print("Blocked for keyword: " + str(text))
-        # Blocked
-        return True
-    # Not blocked
-    return False
 
 
 @app.route('/')
@@ -174,8 +123,7 @@ def get_status():
 
 @app.route('/tweetbot/api/v1.0/queue', methods=['GET'])
 def get_queue():
-    post_queue = PostQueue()
-    backlog = post_queue.list_as_json()
+    backlog = twitter.queue_list_as_json()
     return jsonify({'backlog': backlog})
 
 

@@ -5,6 +5,8 @@ from peewee import *
 
 from settings import *
 
+from post_queue import PostQueue
+
 
 class TwitterStatus(peewee.Model):
     current_rate = peewee.CharField()
@@ -35,6 +37,7 @@ class Twitter(object):
         self.min_ratelimit = min_ratelimit
         self.min_ratelimit_search = min_ratelimit_search
         self.min_ratelimit_retweet = min_ratelimit_retweet
+        self.queue = PostQueue()
 
     def search(self, query):
         results = self.api.request(
@@ -113,3 +116,56 @@ class Twitter(object):
     def getState(self):
         state = TwitterStatus.select().get()
         return { 'state': state.current_state, 'rate': state.current_rate }
+
+    def updateQueue(self):
+        if self.queue.count() > 0:
+
+            if self.canRetweet():
+                post = self.queue.first()
+
+                self.CheckForFollowRequest(post)
+                self.CheckForFavoriteRequest(post)
+
+                r = self.api.request('statuses/retweet/:' + str(post['id']))
+                CheckError(r)
+
+                self.queue.popFirst()
+
+    def CheckForFollowRequest(self, item):
+        text = item['text']
+        if any(x in text.lower() for x in follow_keywords):
+            try:
+                self.followUser(
+                    item['retweeted_status']['user']['screen_name'])
+
+            except:
+                self.followUser(item['user']['screen_name'])
+
+    def CheckForFavoriteRequest(self, item):
+        text = item['text']
+
+        if any(x in text.lower() for x in fav_keywords):
+            try:
+                r = self.api.request('favorites/create',
+                                        {'id': item['retweeted_status']['id']})
+                # CheckError(r)
+                # LogAndPrint("Favorite: " + str(item['retweeted_status']['id']))
+            except:
+                r = self.api.request('favorites/create', {'id': item['id']})
+                # CheckError(r)
+                # LogAndPrint("Favorite: " + str(item['id']))
+
+    def CheckForBlockedKeywords(self, item):
+        text = item['text']
+
+        if any(x in text.lower() for x in blocked_keywords):
+            # Blocked
+            return True
+        # Not blocked
+        return False
+
+    def queue_list_as_json(self):
+        return self.queue.list_as_json()
+
+    def queue_add(self, item):
+        self.queue.add(item)
