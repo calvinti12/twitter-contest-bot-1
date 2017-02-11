@@ -5,6 +5,12 @@ Inspired by the twitter bot idea from http://www.hscott.net/twitter-contest-winn
 [![Build Status](https://travis-ci.org/Designer023/twitter-contest-bot.svg?branch=master)](https://travis-ci.org/Designer023/twitter-contest-bot)
 
 
+NOTE
+----
+
+The doc need updating to cover installing cellery, mysql, rabbitmq etc, Flask! TODO
+
+
 Disclaimer
 ------------
 

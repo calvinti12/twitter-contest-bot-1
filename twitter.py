@@ -36,6 +36,17 @@ class Twitter(object):
         self.min_ratelimit_search = min_ratelimit_search
         self.min_ratelimit_retweet = min_ratelimit_retweet
 
+    def search(self, query):
+        results = self.api.request(
+            'search/tweets', {
+                'q': query,
+                'result_type': "mixed",
+                'count': 100
+            }
+        )
+        CheckError(results)
+        return results
+
     def updateState(self, rateArray):
         self.rate_limit = rateArray
         percent = rateArray[2]

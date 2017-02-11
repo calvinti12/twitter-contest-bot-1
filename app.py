@@ -15,14 +15,12 @@ twitter = Twitter(consumer_key, consumer_secret,
                  access_token_key, access_token_secret,
                  min_ratelimit, min_ratelimit_search, min_ratelimit_retweet)
 
-broker_url = 'amqp://root:root@localhost:5672/app/'
-
 ignore = IgnoreList()
 queue = PostQueue()
 
 app = Flask(__name__, static_url_path='')
-app.config['CELERY_BROKER_URL'] = broker_url
-app.config['CELERY_RESULT_BACKEND'] = broker_url
+app.config['CELERY_BROKER_URL'] = celery_broker_url
+app.config['CELERY_RESULT_BACKEND'] = celery_broker_url
 
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
 celery.conf.update(app.config)
@@ -62,11 +60,7 @@ def ScanForContests():
             print("Getting new results for: " + search_query)
 
             try:
-                r = twitter.api.request(
-                    'search/tweets', {'q': search_query,
-                                      'result_type': "mixed",
-                                      'count': 100})
-                CheckError(r)
+                r = twitter.search(search_query)
                 c = 0
 
                 for item in r:
