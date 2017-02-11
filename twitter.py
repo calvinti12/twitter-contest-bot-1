@@ -6,7 +6,7 @@ from peewee import *
 from settings import *
 
 from post_queue import PostQueue
-
+from ignore_list import IgnoreList
 
 class TwitterStatus(peewee.Model):
     current_rate = peewee.CharField()
@@ -38,6 +38,7 @@ class Twitter(object):
         self.min_ratelimit_search = min_ratelimit_search
         self.min_ratelimit_retweet = min_ratelimit_retweet
         self.queue = PostQueue()
+        self.ignore = IgnoreList()
 
     def search(self, query):
         results = self.api.request(
@@ -169,3 +170,71 @@ class Twitter(object):
 
     def queue_add(self, item):
         self.queue.add(item)
+
+    # Scan for new contests, but not too often because of the rate limit.
+    def ScanForContests(self):
+
+        # Check if thw twitter object (rate limit) allows this roundof searches
+        if self.canSearch():
+
+            # Loop through the search queries
+            for search_query in search_queries:
+
+                try:
+                    query_results = self.search(search_query)
+                    c = 0
+
+                    for item in query_results:
+
+                        c = c + 1
+                        user_item = item['user']
+                        screen_name = user_item['screen_name']
+                        text = item['text']
+                        text = text.replace("\n", "")
+                        id = str(item['id'])
+                        original_id = id
+                        original_screen_name = screen_name
+                        is_retweet = 0
+
+                        if 'retweeted_status' in item:
+                            is_retweet = 1
+                            original_item = item['retweeted_status']
+                            original_id = str(original_item['id'])
+                            original_user_item = original_item['user']
+                            original_screen_name = original_user_item[
+                                'screen_name']
+
+                        ignore_list_local = self.ignore.list()
+                        contains_blocked_keywords = self.CheckForBlockedKeywords(
+                            item)
+
+                        if not original_id in ignore_list_local and not contains_blocked_keywords:
+
+                            if not original_screen_name in ignore_list_local:
+
+                                if not screen_name in ignore_list_local:
+
+                                    if item[
+                                        'retweet_count'] > retweet_threshold:
+
+                                        self.queue_add(item)
+
+                                        if is_retweet:
+                                            print(
+                                                id + " - " + screen_name + " retweeting " + original_id + " - " + original_screen_name + ": " + text)
+                                            self.ignore.add(original_id)
+
+                                        else:
+                                            print(
+                                                id + " - " + screen_name + ": " + text)
+                                            self.ignore.add(id)
+
+                            else:
+                                if contains_blocked_keywords:
+                                    self.ignore.add(id)
+                                    print "blocked keywords - not adding"
+
+                except Exception as e:
+                    print(
+                        "Could not connect to TwitterAPI - are your credentials correct?")
+                    print("Exception: " + str(e))
