@@ -4,3 +4,4 @@ ignorelist
 .idea/
 *.pyc
 settings.py
+celerybeat-schedule.db

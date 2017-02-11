@@ -130,7 +130,10 @@ class Twitter(object):
                 r = self.api.request('statuses/retweet/:' + str(post['id']))
                 CheckError(r)
 
+                # Remove from Queue
                 self.queue.popFirst()
+                # Add to ignore list
+                self.ignore.add(post['id'])
 
     def CheckForFollowRequest(self, item):
         text = item['text']
