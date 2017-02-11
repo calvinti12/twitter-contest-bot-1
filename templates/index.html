@@ -12,14 +12,17 @@
 
 </head>
 <body>
+    <div id="status"></div>
     <div id="sending"></div>
 
     <script>
         $( document ).ready(function() {
-            setInterval("updateTweetQueue()",5000);
+            setInterval("updateTweetQueue()",1000);
+            setInterval("updateQueueStatus()",1000);
         })
 
         var $sending_container = $('#sending');
+        var $status_container = $('#status');
 
         function updateTweetQueue() {
           $.ajax({
@@ -28,6 +31,16 @@
            success: function(data){
                var tweeting = data.backlog[0].json.text;
                $sending_container.html(tweeting)
+           }
+         });
+        }
+
+        function updateQueueStatus() {
+          $.ajax({
+           type: "GET",
+           url: "/tweetbot/api/v1.0/status",
+           success: function(data){
+               $status_container.html(data.state + " : " +  data.rate)
            }
          });
         }

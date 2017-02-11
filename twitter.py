@@ -1,10 +1,33 @@
 from TwitterAPI import TwitterAPI
 from log import *
+import peewee
+from peewee import *
+
+from settings import *
+
+
+class TwitterStatus(peewee.Model):
+    current_rate = peewee.CharField()
+    current_state = peewee.CharField()
+
+    class Meta:
+        database = MySQLDatabase(
+            database_table,
+            user=database_user,
+            passwd=database_password
+        )
+
+try:
+    TwitterStatus.create_table()
+    print 'Twitter Status DB Table created'
+except:
+    print 'Twitter Status DB Table exists'
+    pass
 
 class Twitter(object):
 
     def __init__(self, consumer_key, consumer_secret, access_token_key, access_token_secret, min_ratelimit, min_ratelimit_search, min_ratelimit_retweet):
-        print 'Twitter'
+        print 'Twitter initiated'
         self.api = TwitterAPI(consumer_key, consumer_secret,
                          access_token_key, access_token_secret)
         self.rate_limit = [999, 999, 100]
@@ -12,6 +35,28 @@ class Twitter(object):
         self.min_ratelimit = min_ratelimit
         self.min_ratelimit_search = min_ratelimit_search
         self.min_ratelimit_retweet = min_ratelimit_retweet
+
+    def updateState(self, rateArray):
+        self.rate_limit = rateArray
+        percent = rateArray[2]
+        status_text = 'OK'
+        if percent < 5.0:
+            status_text = "CRITICAL"
+        elif percent < 30.0:
+            status_text = "WARNING"
+        elif percent < 50.0:
+            status_text = "NOTICE"
+
+        try:
+            # Update existing
+            state = TwitterStatus.select().get()
+            state.current_rate = rateArray
+            state.current_state = status_text
+            state.save()
+        except:
+            # Create new status entry
+            item = TwitterStatus(current_rate=rateArray, current_state='initial')
+            item.save()
 
     def updateRateLimitStatus(self):
         r = self.api.request('application/rate_limit_status').json()
@@ -23,22 +68,10 @@ class Twitter(object):
                 percent = float(remaining) / float(limit) * 100
 
                 if res == "/search/tweets":
-                    self.rate_limit_search = [limit, remaining, percent]
+                    self.updateState([limit, remaining, percent])
 
                 if res == "/application/rate_limit_status":
-                    self.rate_limit = [limit, remaining, percent]
-
-                # print(res_family + " -> " + res + ": " + str(percent))
-                if percent < 5.0:
-                    LogAndPrint(res_family + " -> " + res + ": " + str(
-                        percent) + "  !!! <5% Emergency exit !!!")
-                    sys.exit(res_family + " -> " + res + ": " + str(
-                        percent) + "  !!! <5% Emergency exit !!!")
-                elif percent < 30.0:
-                    LogAndPrint(res_family + " -> " + res + ": " + str(
-                        percent) + "  !!! <30% alert !!!")
-                elif percent < 70.0:
-                    print(res_family + " -> " + res + ": " + str(percent))
+                    self.updateState([limit, remaining, percent])
 
     def followUser(self, username):
         # try:
@@ -49,6 +82,9 @@ class Twitter(object):
             LogAndPrint("Followed: " + username)
 
     def rateHigh(self):
+        #get rate from DB
+        self.rate_limit = TwitterStatus.select().get()
+
         if self.rate_limit[2] < self.min_ratelimit:
             return True
         return False
@@ -63,3 +99,6 @@ class Twitter(object):
             return True
         return False
 
+    def getState(self):
+        state = TwitterStatus.select().get()
+        return { 'state': state.current_state, 'rate': state.current_rate }

@@ -209,9 +209,17 @@ def ScanForContests():
         print("Search skipped! Queue: " + str(queue.count()) + " Ratelimit: " + str(twitter.rate_limit_search[1]) + "/" + str(ratelimit_search[0]) + " (" + str(ratelimit_search[2]) + "%)")
 
 
-CheckRateLimit()
-ScanForContests()
-UpdateQueue()
 
-while (True):
-    time.sleep(1)
+
+def start_tweet_bot():
+    print "!!!!!!!!!!!!!!!!!!!!!!!!!! START TWEETBOT !!!!!!!!!!!!!!!!!!!!!!!!!!"
+    CheckRateLimit()
+    ScanForContests()
+    UpdateQueue()
+
+    while (True):
+        time.sleep(1)
+
+
+
+
