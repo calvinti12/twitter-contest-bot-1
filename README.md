@@ -26,6 +26,11 @@ Prerequisites
 
   * TwitterAPI
   * Python 2.7
+
+  brew install rabbitmq
+  rabbitmqctl add_user root root
+  rabbitmqctl add_vhost app/
+  rabbitmqctl set_permissions -p app/ root ".*" ".*" ".*"
   
 Configuration
 ------------
