@@ -1,30 +1,13 @@
+import os
+
 from TwitterAPI import TwitterAPI
 from log import *
-import peewee
-from peewee import *
 
-from settings import *
+from settings.settings import *
 
 from post_queue import PostQueue
 from ignore_list import IgnoreList
-
-class TwitterStatus(peewee.Model):
-    current_rate = peewee.CharField()
-    current_state = peewee.CharField()
-
-    class Meta:
-        database = MySQLDatabase(
-            database_table,
-            user=database_user,
-            passwd=database_password
-        )
-
-try:
-    TwitterStatus.create_table()
-    print 'Twitter Status DB Table created'
-except:
-    print 'Twitter Status DB Table exists'
-    pass
+from bot_meta import BotMeta
 
 class Twitter(object):
 
@@ -39,6 +22,20 @@ class Twitter(object):
         self.min_ratelimit_retweet = min_ratelimit_retweet
         self.queue = PostQueue()
         self.ignore = IgnoreList()
+        self.meta = BotMeta()
+
+
+    def importIgnoreList(self):
+        ignore_list = list()
+        if os.path.isfile('ignorelist'):
+            with open('ignorelist') as f:
+                ignore_list = f.read().splitlines()
+            f.close()
+        for item in ignore_list:
+            # Try to save to the database
+            # print item
+            self.ignore.add(item)
+
 
     def search(self, query):
         results = self.api.request(
@@ -62,16 +59,8 @@ class Twitter(object):
         elif percent < 50.0:
             status_text = "NOTICE"
 
-        try:
-            # Update existing
-            state = TwitterStatus.select().get()
-            state.current_rate = rateArray
-            state.current_state = status_text
-            state.save()
-        except:
-            # Create new status entry
-            item = TwitterStatus(current_rate=rateArray, current_state='initial')
-            item.save()
+        self.meta.save_meta_for_key('current_rate', rateArray)
+        self.meta.save_meta_for_key('current_state', status_text)
 
     def updateRateLimitStatus(self):
         r = self.api.request('application/rate_limit_status').json()
@@ -98,25 +87,26 @@ class Twitter(object):
 
     def rateHigh(self):
         #get rate from DB
-        self.rate_limit = TwitterStatus.select().get()
+        self.rate_limit = self.meta.load_meta_for_key('current_rate')
 
         if self.rate_limit[2] < self.min_ratelimit:
             return True
         return False
 
     def canSearch(self):
-        if not self.rate_limit_search[2] < self.min_ratelimit_search:
+        if not self.meta.load_meta_for_key('current_rate')[2] < self.min_ratelimit_search:
             return True
         return False
 
     def canRetweet(self):
-        if not self.rate_limit[2] < self.min_ratelimit_retweet:
+        if not self.meta.load_meta_for_key('current_rate')[2] < self.min_ratelimit_retweet:
             return True
         return False
 
     def getState(self):
-        state = TwitterStatus.select().get()
-        return { 'state': state.current_state, 'rate': state.current_rate }
+        state = self.meta.load_meta_for_key('current_state')
+        rate = self.meta.load_meta_for_key('current_rate')
+        return { 'state': state, 'rate': rate }
 
     def updateQueue(self):
         if self.queue.count() > 0:
@@ -152,12 +142,12 @@ class Twitter(object):
             try:
                 r = self.api.request('favorites/create',
                                         {'id': item['retweeted_status']['id']})
-                # CheckError(r)
-                # LogAndPrint("Favorite: " + str(item['retweeted_status']['id']))
+                CheckError(r)
+                LogAndPrint("Favorite: " + str(item['retweeted_status']['id']))
             except:
                 r = self.api.request('favorites/create', {'id': item['id']})
-                # CheckError(r)
-                # LogAndPrint("Favorite: " + str(item['id']))
+                CheckError(r)
+                LogAndPrint("Favorite: " + str(item['id']))
 
     def CheckForBlockedKeywords(self, item):
         text = item['text']
@@ -180,14 +170,18 @@ class Twitter(object):
         # Check if thw twitter object (rate limit) allows this roundof searches
         if self.canSearch():
 
+
             # Loop through the search queries
             for search_query in search_queries:
-
+                LogAndPrint("Searching for : " + str(search_query))
+                self.meta.save_meta_for_key('searching', search_query)
                 try:
                     query_results = self.search(search_query)
                     c = 0
 
                     for item in query_results:
+
+
 
                         c = c + 1
                         user_item = item['user']
@@ -211,33 +205,41 @@ class Twitter(object):
                         contains_blocked_keywords = self.CheckForBlockedKeywords(
                             item)
 
-                        if not original_id in ignore_list_local and not contains_blocked_keywords:
-
-                            if not original_screen_name in ignore_list_local:
-
-                                if not screen_name in ignore_list_local:
-
-                                    if item[
-                                        'retweet_count'] > retweet_threshold:
-
-                                        self.queue_add(item)
-
-                                        if is_retweet:
-                                            print(
-                                                id + " - " + screen_name + " retweeting " + original_id + " - " + original_screen_name + ": " + text)
-                                            self.ignore.add(original_id)
-
-                                        else:
-                                            print(
-                                                id + " - " + screen_name + ": " + text)
-                                            self.ignore.add(id)
-
+                        if contains_blocked_keywords:
+                            LogAndPrint( "Keywords are blocked, skip this entry: " + str(text) )
+                            if is_retweet:
+                                self.ignore.add(original_id)
                             else:
-                                if contains_blocked_keywords:
-                                    self.ignore.add(id)
-                                    print "blocked keywords - not adding"
+                                self.ignore.add(id)
+                        else:
+                            if not original_id in ignore_list_local and not contains_blocked_keywords:
+
+                                if not original_screen_name in ignore_list_local:
+
+                                    if not screen_name in ignore_list_local:
+
+                                        if item['retweet_count'] > retweet_threshold:
+
+                                            self.queue_add(item)
+
+                                            if is_retweet:
+                                                print(
+                                                    id + " - " + screen_name + " retweeting " + original_id + " - " + original_screen_name + ": " + text)
+                                                self.ignore.add(original_id)
+
+                                            else:
+                                                print(
+                                                    id + " - " + screen_name + ": " + text)
+                                                self.ignore.add(id)
+
+                                else:
+                                    if contains_blocked_keywords:
+                                        self.ignore.add(id)
+                                        print "blocked keywords - not adding"
 
                 except Exception as e:
                     print(
                         "Could not connect to TwitterAPI - are your credentials correct?")
                     print("Exception: " + str(e))
+
+            self.meta.save_meta_for_key('searching', False)

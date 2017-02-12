@@ -1,7 +1,7 @@
 import peewee
 from peewee import *
 
-from settings import *
+from settings.settings import *
 
 class IgnoredItem(peewee.Model):
     tweet_id = peewee.CharField()
@@ -13,12 +13,12 @@ class IgnoredItem(peewee.Model):
             passwd=database_password
         )
 
-        try:
-            IgnoredItem.create_table()
-            print 'Ignore list created'
-        except:
-            print 'Ignore list already created'
-            pass
+try:
+    IgnoredItem.create_table()
+    print 'Ignore list created'
+except:
+    print 'Ignore list already created'
+    pass
 
 
 class IgnoreList(object):

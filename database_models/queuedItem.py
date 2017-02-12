@@ -1,7 +1,7 @@
 import peewee
 from peewee import *
 
-from settings import *
+from settings.settings import *
 
 class QueuedItem(peewee.Model):
     json = peewee.TextField()
