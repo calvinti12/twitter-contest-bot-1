@@ -27,11 +27,15 @@ Prerequisites
   * TwitterAPI
   * Python 2.7
 
-  brew install rabbitmq
-  rabbitmqctl add_user root root
-  rabbitmqctl add_vhost app/
-  rabbitmqctl set_permissions -p app/ root ".*" ".*" ".*"
-  
+
+    brew install rabbitmq
+    rabbitmqctl add_user root root
+    rabbitmqctl add_vhost app/
+    rabbitmqctl set_permissions -p app/ root ".*" ".*" ".*"
+
+    celery worker -A app.celery --loglevel=info --beat
+
+
 Configuration
 ------------
 
