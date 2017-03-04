@@ -1,9 +1,6 @@
 #!flask/bin/python
 from settings.settings import *
-from datetime import timedelta
 from flask import Flask, jsonify, render_template
-from celery import Celery
-from celery.task import periodic_task
 
 from twitter import Twitter
 from bot_meta import BotMeta
@@ -13,9 +10,6 @@ app = Flask(__name__, static_url_path='')
 app.config['CELERY_BROKER_URL'] = celery_broker_url
 app.config['CELERY_RESULT_BACKEND'] = celery_broker_url
 
-# Setup Celery
-celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
-celery.conf.update(app.config)
 
 # Create Twitter object
 twitter = Twitter(consumer_key, consumer_secret,
@@ -24,21 +18,6 @@ twitter = Twitter(consumer_key, consumer_secret,
 
 # Create the meta object that loads/saves details to the DB
 meta = BotMeta()
-
-# Schedule tasks with beat
-@periodic_task(run_every=timedelta(seconds=rate_limit_update_time))
-def CheckRateLimit():
-    twitter.updateRateLimitStatus()
-
-
-@periodic_task(run_every=timedelta(seconds=retweet_update_time))
-def UpdateQueue():
-    twitter.updateQueue()
-
-
-@periodic_task(run_every=timedelta(seconds=scan_update_time))
-def scanForContests():
-    twitter.ScanForContests()
 
 
 # Setup the routes for Flask
