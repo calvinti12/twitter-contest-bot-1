@@ -9,6 +9,8 @@ from post_queue import PostQueue
 from ignore_list import IgnoreList
 from bot_meta import BotMeta
 
+from slackbot import get_channel_id_from_name, send_message
+
 class Twitter(object):
 
     def __init__(self, consumer_key, consumer_secret, access_token_key, access_token_secret, min_ratelimit, min_ratelimit_search, min_ratelimit_retweet):
@@ -162,6 +164,9 @@ class Twitter(object):
     def queue_list_as_json(self):
         return self.queue.list_as_json()
 
+    def queue_length(self):
+        return self.queue.count()
+
     def queue_add(self, item):
         self.queue.add(item)
 
@@ -176,13 +181,15 @@ class Twitter(object):
             for search_query in search_queries:
                 LogAndPrint("Searching for : " + str(search_query))
                 self.meta.save_meta_for_key('searching', search_query)
+
+                # channel_id = get_channel_id_from_name('bots')
+                # message = "Searching for: %s" % (search_query)
+                # send_message(channel_id, message)
                 try:
                     query_results = self.search(search_query)
                     c = 0
 
                     for item in query_results:
-
-
 
                         c = c + 1
                         user_item = item['user']
@@ -242,5 +249,9 @@ class Twitter(object):
                     print(
                         "Could not connect to TwitterAPI - are your credentials correct?")
                     print("Exception: " + str(e))
+
+            channel_id = get_channel_id_from_name('bots')
+            message = "Tweet queue is now %s items long" % (self.queue_length())
+            send_message(channel_id, message)
 
             self.meta.save_meta_for_key('searching', False)

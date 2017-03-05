@@ -1,16 +1,16 @@
 #!flask/bin/python
 from settings.settings import *
-from flask import Flask, jsonify, render_template, send_from_directory
+from flask import Flask, jsonify, render_template, send_from_directory, request, Response
 
 import ast
+
+from slackbot import get_channel_id_from_name, send_message
 
 from twitter import Twitter
 from bot_meta import BotMeta
 
 # Setup Flask App
 app = Flask(__name__, static_url_path='')
-app.config['CELERY_BROKER_URL'] = celery_broker_url
-app.config['CELERY_RESULT_BACKEND'] = celery_broker_url
 
 
 # Create Twitter object
@@ -78,6 +78,35 @@ def upload_ignored():
 @app.route('/static/<path:path>')
 def static_files(path):
     return send_from_directory('static', path)
+
+
+
+@app.route('/slack', methods=['POST'])
+def inbound_slack():
+    print request.form.get('token')
+    if request.form.get('token') == SLACK_WEBHOOK_SECRET:
+        channel = request.form.get('channel_name')
+        # username = request.form.get('user_name')
+        # text = request.form.get('text')
+        # inbound_message = username + " in " + channel + " says: " + text
+        # print(inbound_message)
+
+        channel_id = get_channel_id_from_name(channel)
+
+        queue_length = twitter.queue_length()
+
+        status = twitter.getState()
+        rate = ast.literal_eval(status['rate'])
+        percent_remaining = rate[2]
+
+        message = "Queue: %s with rate limit @ %s" % (queue_length, percent_remaining)
+
+        if channel_id is not False:
+            send_message(channel_id, message)
+
+    return Response(), 200
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

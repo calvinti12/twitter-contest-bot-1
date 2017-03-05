@@ -24,3 +24,8 @@ search_queries = ["RT to win", "Retweet and win", "RT and win"]
 follow_keywords = [" follow ", " follower ", "following"]
 fav_keywords = [" fav ", " favorite "]
 blocked_keywords = []
+
+
+SLACK_OAUTH_TOKEN = ''
+SLACK_BOT_TOKEN = ''
+SLACK_WEBHOOK_SECRET = ''
