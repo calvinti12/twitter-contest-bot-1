@@ -2,7 +2,7 @@ var webpack = require('webpack');
 var path = require('path');
 
 module.exports = {
-  // entry: path.resolve(__dirname, './src/js/app.jsx'),
+  entry: path.resolve(__dirname, './src/js/app.jsx'),
   output: {
     //path: path.resolve(__dirname, './dist'),
     filename: 'app.js'
@@ -12,7 +12,7 @@ module.exports = {
       //  on the global var jQuery
       //"jquery": "$"
   },
-
+  // devtool: 'source-map',
   module: {
     loaders: [
       {
@@ -20,9 +20,9 @@ module.exports = {
         loader: "json-loader"
       },
       {
-        test: /\.(js|jsx)$/,
-        exclude: /node_modules/,
-        loader: "babel-loader"
+          test: /\.(js|jsx)$/,
+          exclude: /node_modules/,
+          loader: "babel-loader"
       }
     ]
   },

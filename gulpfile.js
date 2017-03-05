@@ -20,9 +20,15 @@ gulp.task('react-dev', function(){
 });
 
 
-gulp.task('watch-react', function() {
+
+
+gulp.task('watch', function() {
     gulp.watch('./src/js/**/*.jsx', ['react-dev']);
 });
+
+
+
+
 
 
 gulp.task('default', ['react-prod']);

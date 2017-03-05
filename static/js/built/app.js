@@ -58,10 +58,6 @@
 
 	var _Dashboard2 = _interopRequireDefault(_Dashboard);
 
-	var _TwitterStatus = __webpack_require__(182);
-
-	var _TwitterStatus2 = _interopRequireDefault(_TwitterStatus);
-
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	// Let the window know there is a React element on the page
@@ -21557,7 +21553,7 @@
 
 	            return _react2.default.createElement(
 	                'div',
-	                null,
+	                { className: 'dashboard' },
 	                _react2.default.createElement(_TwitterStatus2.default, null),
 	                _react2.default.createElement(_SearchingStatus2.default, null),
 	                _react2.default.createElement(_TweetQueue2.default, null)

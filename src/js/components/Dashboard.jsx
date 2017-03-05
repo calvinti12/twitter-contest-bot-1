@@ -9,7 +9,7 @@ class Dashboard extends Component {
     render() {
 
         return (
-             <div>
+             <div className="dashboard">
                  <TwitterStatus />
                  <SearchingStatus />
                  <TweetQueue />
@@ -18,5 +18,7 @@ class Dashboard extends Component {
 
     }
 }
+
+
 
 export default Dashboard;
