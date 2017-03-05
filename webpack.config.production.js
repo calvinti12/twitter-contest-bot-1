@@ -5,12 +5,12 @@ module.exports = {
   // entry: path.resolve(__dirname, './src/js/app.jsx'),
   output: {
     //path: path.resolve(__dirname, './dist'),
-    filename: 'comments.js'
+    filename: 'app.js'
   },
   externals: {
       // require("jquery") is external and available
       //  on the global var jQuery
-      "jquery": "$"
+      //"jquery": "$"
   },
 
   module: {
@@ -25,6 +25,9 @@ module.exports = {
         loader: "babel-loader"
       }
     ]
+  },
+  resolve: {
+    extensions: ['', '.js', '.jsx']
   },
   plugins:[
     new webpack.DefinePlugin({

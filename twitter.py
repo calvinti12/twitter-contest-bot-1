@@ -106,6 +106,7 @@ class Twitter(object):
     def getState(self):
         state = self.meta.load_meta_for_key('current_state')
         rate = self.meta.load_meta_for_key('current_rate')
+
         return { 'state': state, 'rate': rate }
 
     def updateQueue(self):

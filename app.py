@@ -1,6 +1,8 @@
 #!flask/bin/python
 from settings.settings import *
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, send_from_directory
+
+import ast
 
 from twitter import Twitter
 from bot_meta import BotMeta
@@ -29,7 +31,19 @@ def root():
 @app.route('/tweetbot/api/v1.0/status', methods=['GET'])
 def get_status():
     status = twitter.getState()
-    return jsonify(status)
+    # print status['rate']
+    rate =  ast.literal_eval( status['rate'] )
+    rate_limit = rate[0]
+    available = rate[1]
+    percent_remaining = rate[2]
+
+    state = {}
+    state['rate_limit'] = rate_limit
+    state['available'] = available
+    state['percent_remaining'] = percent_remaining
+    state['status'] = status['state']
+
+    return jsonify(state)
 
 @app.route('/tweetbot/api/v1.0/search-status', methods=['GET'])
 def get_search_status():
@@ -60,6 +74,10 @@ def upload_ignored():
         print 'Already Imported Ignore list - To import again set the database key "initialised" to False!!'
     return jsonify({'loaded': 'loaded'})
 
+
+@app.route('/static/<path:path>')
+def static_files(path):
+    return send_from_directory('static', path)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,6 +1,8 @@
+from bot_meta import BotMeta
 from settings.settings import *
 import threading
 import time
+import datetime
 
 from twitter import Twitter
 
@@ -8,6 +10,7 @@ twitter = Twitter(consumer_key, consumer_secret,
                   access_token_key, access_token_secret,
                   min_ratelimit, min_ratelimit_search, min_ratelimit_retweet)
 
+meta = BotMeta()
 
 def CheckRateLimit():
     c = threading.Timer(rate_limit_update_time, CheckRateLimit)
@@ -19,6 +22,9 @@ def CheckRateLimit():
         "Ratelimit too low -> Cooldown (" + str(twitter.rate_limit[2]) + "%)")
         time.sleep(30)
 
+    now = datetime.datetime.now()
+    meta.save_meta_for_key('last_check_limit', now)
+
     twitter.updateRateLimitStatus()
 
 
@@ -27,6 +33,10 @@ def UpdateQueue():
     u = threading.Timer(retweet_update_time, UpdateQueue)
     u.daemon = True
     u.start()
+
+    now = datetime.datetime.now()
+    meta.save_meta_for_key('last_update_queue', now)
+
     twitter.updateQueue()
 
 
@@ -35,7 +45,10 @@ def ScanForContests():
     t.daemon = True
     t.start()
 
-    twitter.ScanForContests();
+    now = datetime.datetime.now()
+    meta.save_meta_for_key('last_scan', now)
+
+    twitter.ScanForContests()
 
 
 

@@ -5,3 +5,4 @@ ignorelist
 *.pyc
 settings.py
 celerybeat-schedule.db
+node_modules/*
